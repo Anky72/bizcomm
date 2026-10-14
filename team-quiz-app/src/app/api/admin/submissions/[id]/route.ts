@@ -1,0 +1,3 @@
+import {NextResponse} from "next/server";import {isAdmin} from "@/lib/admin";import {db} from "@/lib/supabase";
+export const runtime="nodejs";
+export async function GET(_req:Request,{params}:{params:Promise<{id:string}>}){if(!await isAdmin())return NextResponse.json({error:"Unauthorized."},{status:401});try{const {id}=await params;const {data,error}=await db().from("quiz_answers").select("question_number,question_id,selected_index,elapsed_seconds,is_correct,quiz_questions(prompt,options,answer_index)").eq("submission_id",id).order("question_number");if(error)throw error;return NextResponse.json({answers:data},{headers:{"Cache-Control":"no-store, private"}})}catch{return NextResponse.json({error:"Could not load answer details."},{status:500})}}

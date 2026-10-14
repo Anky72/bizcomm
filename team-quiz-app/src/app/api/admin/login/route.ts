@@ -1,0 +1,2 @@
+import {NextResponse} from "next/server";import {setAdminCookie,validPassword} from "@/lib/admin";
+export async function POST(req:Request){try{const body=await req.json();if(!validPassword(String(body.password||"")))return NextResponse.json({error:"Invalid credentials."},{status:401});await setAdminCookie();return NextResponse.json({ok:true},{headers:{"Cache-Control":"no-store"}})}catch{return NextResponse.json({error:"Login failed."},{status:500})}}

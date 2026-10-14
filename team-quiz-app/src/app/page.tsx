@@ -1,0 +1,2 @@
+import Quiz from "@/components/Quiz";
+export default function Home() { return <main><h1>Team Quiz</h1><p className="muted">Register your team, then complete the timed quiz. Scores are not shown to participants.</p><Quiz /></main>; }

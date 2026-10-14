@@ -1,0 +1,2 @@
+import Admin from "@/components/Admin";
+export default function Page(){return <main><h1>Quiz admin</h1><p className="muted">Private organizer console. Keep this page and the admin password private.</p><Admin/></main>}

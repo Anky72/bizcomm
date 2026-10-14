@@ -1,0 +1,22 @@
+ "use client";
+import {useEffect,useState} from "react";
+type Row={id:string;team_id:string;leader_name:string;member_count:number;score:number|null;total_seconds:number|null;status:string;created_at:string;whatsapp_phone:string};
+export default function Admin(){
+ const [password,setPassword]=useState("");const [authed,setAuthed]=useState(false);const [rows,setRows]=useState<Row[]>([]);const [file,setFile]=useState<File|null>(null);const [busy,setBusy]=useState(false);const [msg,setMsg]=useState("");const [detailId,setDetailId]=useState("");const [details,setDetails]=useState<any[]>([]);
+ async function call(path:string,init?:RequestInit){const r=await fetch(path,{...init,headers:{...(init?.headers||{}),"Content-Type":"application/json"}});const d=await r.json();if(!r.ok)throw new Error(d.error||"Request failed");return d}
+ async function login(e:React.FormEvent){e.preventDefault();setBusy(true);setMsg("");try{await call("/api/admin/login",{method:"POST",body:JSON.stringify({password})});setAuthed(true);await refresh()}catch(e){setMsg(e instanceof Error?e.message:"Login failed")}finally{setBusy(false)}}
+ async function refresh(){try{const d=await call("/api/admin/submissions");setRows(d.submissions)}catch(e){setMsg(e instanceof Error?e.message:"Could not load submissions")}}
+ async function upload(){if(!file)return;setBusy(true);setMsg("");try{const text=await file.text();const data=JSON.parse(text);const d=await call("/api/admin/questions",{method:"PUT",body:JSON.stringify({questions:data})});setMsg(`Question bank replaced: ${d.count} questions. Existing submissions are retained.`);setFile(null)}catch(e){setMsg(e instanceof Error?e.message:"Upload failed. Use valid JSON.")}finally{setBusy(false)}}
+ async function showDetails(id:string){try{const d=await call(`/api/admin/submissions/${id}`);setDetails(d.answers||[]);setDetailId(id)}catch(e){setMsg(e instanceof Error?e.message:"Could not load answer details")}}
+ async function remove(id:string,team:string){if(!confirm(`Permanently delete submission for ${team} and its answers?`))return;try{await call("/api/admin/submissions",{method:"DELETE",body:JSON.stringify({id})});setRows(r=>r.filter(x=>x.id!==id));setMsg(`Deleted ${team}.`)}catch(e){setMsg(e instanceof Error?e.message:"Delete failed")}}
+ async function logout(){await call("/api/admin/logout",{method:"POST"});setAuthed(false);setRows([])}
+ if(!authed)return <form onSubmit={login}><div className="field"><label>Admin password</label><input type="password" value={password} onChange={e=>setPassword(e.target.value)} required autoComplete="current-password"/></div>{msg&&<div className="notice error">{msg}</div>}<button disabled={busy}>{busy?"Checking…":"Log in"}</button></form>;
+ return <section><div className="topbar"><h2>Submissions ({rows.length})</h2><button className="secondary" onClick={refresh}>Refresh</button><button className="secondary" onClick={logout}>Log out</button></div>
+ <div className="question"><h2>Replace question bank</h2><p>Upload a JSON file containing at least 10 questions and their answer keys. This replaces the active question bank for future quiz entries; existing scores remain unchanged.</p><pre>{`[
+  {"prompt":"What does ROI stand for?","options":["Return on Investment","Rate of Inflation","Risk of Interest","Revenue on Income"],"answer_index":0,"explanation":"ROI measures return relative to investment."}
+]`}</pre><input type="file" accept=".json,application/json" onChange={e=>setFile(e.target.files?.[0]||null)}/><p><button disabled={!file||busy} onClick={upload}>Upload answer key + questions</button></p></div>
+ {msg&&<div className="notice">{msg}</div>}
+ <div className="tablewrap"><table><thead><tr><th>Team</th><th>Leader</th><th>Members</th><th>Score</th><th>Section 2 time</th><th>Status</th><th>Details</th><th>Action</th></tr></thead><tbody>{rows.map(r=><tr key={r.id}><td>{r.team_id}</td><td>{r.leader_name}<br/><span className="muted">{r.whatsapp_phone}</span></td><td>{r.member_count}</td><td>{r.score===null?"—":`${r.score}/10`}</td><td>{r.total_seconds===null?"—":`${Math.floor(r.total_seconds/60)}m ${r.total_seconds%60}s`}</td><td>{r.status}</td><td><button className="secondary" onClick={()=>void showDetails(r.id)}>Answers / timing</button></td><td><button className="danger" onClick={()=>remove(r.id,r.team_id)}>Delete</button></td></tr>)}</tbody></table></div>
+ <p className="muted">Per-question timings and selected answers are stored in the database. For detailed export, use Supabase SQL Editor with the admin account.</p>
+ </section>
+}
